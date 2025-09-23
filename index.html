@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Average Annual Rainfall in Malaysia by Administrative Unit (2014-2020)</title>
+  <!-- Import Vega & Vega-Lite (using non-specific major versions for robustness) -->
+  <script src="https://cdn.jsdelivr.net/npm/vega@5"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vega-lite@5"></script>
+  <!-- Import Vega-Embed -->
+  <script src="https://cdn.jsdelivr.net/npm/vega-embed@6"></script>
+  <link rel="stylesheet" type="text/css" href="style.css" media="all">
+</head>
+<body>
+  <h1>Average Annual Rainfall in Malaysia by Administrative Unit</h1>
+  <p class="map-description">Visualizing rainfall volume (mm) averaged from 2014 to 2020.</p>
+  <div id="map-container"></div>
+
+  <script type="text/javascript">
+    const vegaLiteSpec = {
+      "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+      "width": 880,
+      "height": 550,
+      "title": {
+        "text": "Average Annual Rainfall in Malaysia (2014-2020)",
+        "subtitle": [
+          "Data primarily from observed historical records.",
+          "Missing regions supplemented with projected rainfall data.",
+          "Kuala Lumpur and Putrajaya use Selangor's average as a proxy."
+        ],
+        "subtitleFont": "Arial",
+        "subtitleFontSize": 10,
+        "anchor": "start"
+      },
+      "projection": {
+        "type": "mercator"
+      },
+      "layer": [
+        {
+          // Layer 1: Ocean background (using CDN dataset directly in its layer)
+          "data": {
+            "url": "https://cdn.jsdelivr.net/npm/vega-datasets@v1.29.0/data/world-110m.json",
+            "format": {"type": "topojson", "feature": "countries"}
+          },
+          "mark": {"type": "geoshape", "fill": "#e6f2ff", "stroke": "white"}
+        },
+        {
+          // Layer 2: Graticule
+          "mark": {"type": "graticule", "stroke": "#dcdcdc", "strokeWidth": 0.3}
+        },
+        {
+          // Layer 3: Malaysian Administrative Units - Data definition moved directly here
+          "data": {
+            "url": "malaysia_avg_annual_rainfall_final.csv", // Your CSV data
+            "format": {"type": "csv"}
+          },
+          "transform": [
+            {
+              "lookup": "State", // Column in your CSV data
+              "from": {
+                "data": {
+                  "url": "malaysia_state.json", // Your TopoJSON data
+                  "format": {
+                    "type": "topojson",
+                    "feature": "malaysia_state" // Confirmed feature name
+                  }
+                },
+                "as": "geo",
+                "key": "properties.NAME_1" // Column in TopoJSON properties
+              }
+            }
+          ],
+          "mark": {"type": "geoshape", "stroke": "white", "strokeWidth": 0.8},
+          "encoding": {
+            "color": {
+              "field": "Average_Annual_Rainfall_mm",
+              "type": "quantitative",
+              "title": "Avg. Annual Rainfall (mm)",
+              "scale": {
+                "range": "blues",
+                "scheme": "lightgreyblue",
+                "domainMin": 1500, // Fine-tune this after seeing the map
+                "domainMax": 20000 // Fine-tune this after seeing the map
+              },
+              "legend": {
+                "titleLimit": 120,
+                "format": ".0f"
+              }
+            },
+            "tooltip": [
+              {"field": "State", "type": "nominal", "title": "Administrative Unit"},
+              {"field": "Average_Annual_Rainfall_mm", "type": "quantitative", "title": "Avg. Rainfall (mm)", "format": ".1f"}
+            ]
+          }
+        }
+      ],
+      "config": {
+        "axis": {"grid": false, "domain": false},
+        "view": {"stroke": null}
+      }
+    };
+
+    vegaEmbed("#map-container", vegaLiteSpec, {"actions": false}).catch(console.error);
+  </script>
+</body>
+</html>
