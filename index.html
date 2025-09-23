@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Average Annual Rainfall in Malaysia by Administrative Unit (2014-2020)</title>
+  <script src="https://cdn.jsdelivr.net/npm/vega@5.22.1"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vega-lite@5.2.0"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vega-embed@6.20.8"></script>
+</head>
+<body>
+  <h1>Average Annual Rainfall in Malaysia by Administrative Unit</h1>
+  <div id="map-container"></div>
+
+  <script type="text/javascript">
+    const spec = {
+      "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+      "width": 880,
+      "height": 550,
+      "title": "Average Annual Rainfall in Malaysia (2014-2020)",
+      "projection": {"type": "mercator"},
+      "layer": [
+        {
+          // Lightgray fallback (draw all states even if no data)
+          "data": {
+            "url": "malaysia_state.json",
+            "format": {"type": "topojson", "feature": "malaysia_state"}
+          },
+          "mark": {"type": "geoshape", "fill": "lightgray", "stroke": "white"},
+          "encoding": {
+            "tooltip": [
+              {"field": "properties.NAME_1", "type": "nominal", "title": "State"}
+            ]
+          }
+        },
+        {
+          // Rainfall choropleth
+          "data": {
+            "url": "malaysia_state.json",
+            "format": {"type": "topojson", "feature": "malaysia_state"}
+          },
+          "transform": [
+            {
+              "lookup": "properties.NAME_1",
+              "from": {
+                "data": {"url": "malaysia_avg_annual_rainfall_final.csv"},
+                "key": "State",
+                "fields": ["Average_Annual_Rainfall_mm"]
+              }
+            }
+          ],
+          "mark": {"type": "geoshape", "stroke": "white"},
+          "encoding": {
+            "color": {
+              "field": "Average_Annual_Rainfall_mm",
+              "type": "quantitative",
+              "title": "Avg. Annual Rainfall (mm)",
+              // "scale": {"scheme": "blues", "domainMin": 1000, "domainMax": 5000},
+              "scale": {"scheme": "blues"},
+              "legend": {"titleLimit": 120, "format": ".0f"}
+            },
+            "tooltip": [
+              {"field": "properties.NAME_1", "type": "nominal", "title": "State"},
+              {
+                "field": "Average_Annual_Rainfall_mm",
+                "type": "quantitative",
+                "title": "Avg. Rainfall (mm)",
+                "format": ".1f"
+              }
+            ]
+          }
+        }
+      ]
+    };
+
+    vegaEmbed("#map-container", spec, {"actions": false}).catch(console.error);
+  </script>
+</body>
+</html>
