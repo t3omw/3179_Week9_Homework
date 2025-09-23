@@ -2,111 +2,76 @@
 <html>
 <head>
   <title>Average Annual Rainfall in Malaysia by Administrative Unit (2014-2020)</title>
-  <!-- Import Vega & Vega-Lite (always latest versions from CDN) -->
   <script src="https://cdn.jsdelivr.net/npm/vega@5.22.1"></script>
   <script src="https://cdn.jsdelivr.net/npm/vega-lite@5.2.0"></script>
-  <!-- Import Vega-Embed -->
   <script src="https://cdn.jsdelivr.net/npm/vega-embed@6.20.8"></script>
-  <link rel="stylesheet" type="text/css" href="style.css" media="all">
 </head>
 <body>
   <h1>Average Annual Rainfall in Malaysia by Administrative Unit</h1>
-  <p class="map-description">Visualizing rainfall volume (mm) averaged from 2014 to 2020.</p>
   <div id="map-container"></div>
 
   <script type="text/javascript">
-    const vegaLiteSpec = {
+    const spec = {
       "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
-      "width": 880, // Adjust to fit container, keep some padding
-      "height": 550, // Adjust to fit container
-      "title": {
-        "text": "Average Annual Rainfall in Malaysia (2014-2020)",
-        "subtitle": [
-          "Data primarily from observed historical records.",
-          "Missing regions supplemented with projected rainfall data.",
-          "Kuala Lumpur and Putrajaya use Selangor's average as a proxy."
-        ],
-        "subtitleFont": "Arial",
-        "subtitleFontSize": 10,
-        "anchor": "start" // Align title to the left
-      },
-      "projection": {
-        "type": "mercator" // Good general-purpose for Malaysia.
-                           // For optimal fit, consider custom projections from projectionwizard.org.
-      },
+      "width": 880,
+      "height": 550,
+      "title": "Average Annual Rainfall in Malaysia (2014-2020)",
+      "projection": {"type": "mercator"},
       "layer": [
         {
-          // Layer 1: Ocean background (optional, using a simpler base map from Natural Earth)
+          // Lightgray fallback (draw all states even if no data)
           "data": {
-            "url": "https://cdn.jsdelivr.net/npm/vega-datasets@v1.29.0/data/world-110m.json", // Simpler world map for background
-            "format": {"type": "topojson", "feature": "countries"}
+            "url": "malaysia_state.json",
+            "format": {"type": "topojson", "feature": "malaysia_state"}
           },
-          "mark": {"type": "geoshape", "fill": "#e6f2ff", "stroke": "white"}, // Light blue for ocean
-          "transform": [
-            // No specific filters here, just providing a light background context
-          ]
+          "mark": {"type": "geoshape", "fill": "lightgray", "stroke": "white"},
+          "encoding": {
+            "tooltip": [
+              {"field": "properties.NAME_1", "type": "nominal", "title": "State"}
+            ]
+          }
         },
         {
-          // Layer 2: Graticule (longitude/latitude lines for context - HD rubric point!)
-          "mark": {"type": "graticule", "stroke": "#dcdcdc", "strokeWidth": 0.3} // Lighter, thinner lines
-        },
-        {
-          // Layer 3: Malaysian Administrative Units (the main data layer with choropleth encoding)
+          // Rainfall choropleth
           "data": {
-            "url": "malaysia_avg_annual_rainfall_final.csv" // Path to your processed CSV rainfall data
+            "url": "malaysia_state.json",
+            "format": {"type": "topojson", "feature": "malaysia_state"}
           },
           "transform": [
             {
-              "lookup": "State", // This refers to the 'State' column in your CSV data
+              "lookup": "properties.NAME_1",
               "from": {
-                "data": {
-                  "url": "malaysia_state.json", // Path to your TopoJSON file
-                  "format": {
-                    "type": "topojson", // Set to "topojson" as confirmed
-                    "feature": "malaysia_state" // <<< IMPORTANT: REPLACE THIS with the exact feature name from your JSON file
-                  }
-                },
-                "as": "geo",
-                "key": "properties.NAME_1" // This MUST match the exact attribute name for state names in your TopoJSON
+                "data": {"url": "malaysia_avg_annual_rainfall_final.csv"},
+                "key": "State",
+                "fields": ["Average_Annual_Rainfall_mm"]
               }
             }
           ],
-          "mark": {"type": "geoshape", "stroke": "white", "strokeWidth": 0.8}, // White borders for states
+          "mark": {"type": "geoshape", "stroke": "white"},
           "encoding": {
             "color": {
               "field": "Average_Annual_Rainfall_mm",
               "type": "quantitative",
               "title": "Avg. Annual Rainfall (mm)",
-              "scale": {
-                "range": "blues", // A sequential color scheme suitable for rainfall
-                                   // Other good options: "viridis", "plasma", "purples", "greens"
-                "scheme": "lightgreyblue", // A custom scheme that works well for light-to-dark sequential.
-                                         // Or use a predefined scheme from ColorBrewer, e.g., "blues", "viridis"
-                "domainMin": 1000,         // Optional: Adjust these based on the actual range of your data
-                "domainMax": 5000          // from 'malaysia_avg_annual_rainfall_final.csv' for best contrast.
-              },
-              "legend": {
-                "titleLimit": 120, // Prevent legend title from truncating
-                "format": ".0f"   // Format numbers in legend as integers
-              }
+              // "scale": {"scheme": "blues", "domainMin": 1000, "domainMax": 5000},
+              "scale": {"scheme": "blues"},
+              "legend": {"titleLimit": 120, "format": ".0f"}
             },
             "tooltip": [
-              {"field": "State", "type": "nominal", "title": "Administrative Unit"},
-              {"field": "Average_Annual_Rainfall_mm", "type": "quantitative", "title": "Avg. Rainfall (mm)", "format": ".1f"}
+              {"field": "properties.NAME_1", "type": "nominal", "title": "State"},
+              {
+                "field": "Average_Annual_Rainfall_mm",
+                "type": "quantitative",
+                "title": "Avg. Rainfall (mm)",
+                "format": ".1f"
+              }
             ]
           }
         }
-        // Optional: Add another layer for static administrative unit labels if desired,
-        // but tooltips usually suffice for choropleth maps to avoid clutter.
-        // Implementing labels requires calculating centroids, which is more complex.
-      ],
-      "config": {
-        "axis": {"grid": false, "domain": false}, // Remove axis lines for cleaner map
-        "view": {"stroke": null} // Remove stroke around the entire map view
-      }
+      ]
     };
 
-    vegaEmbed("#map-container", vegaLiteSpec, {"actions": false}).catch(console.error); // "actions": false removes the default Vega-Embed menu
+    vegaEmbed("#map-container", spec, {"actions": false}).catch(console.error);
   </script>
 </body>
 </html>
