@@ -5,54 +5,75 @@
   <script src="https://cdn.jsdelivr.net/npm/vega@5.22.1"></script>
   <script src="https://cdn.jsdelivr.net/npm/vega-lite@5.2.0"></script>
   <script src="https://cdn.jsdelivr.net/npm/vega-embed@6.20.8"></script>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h1>Average Annual Rainfall Density (mm/km²) in Malaysia (2014-2020)</h1>
+  <h1>Average Annual Rainfall Density in Malaysia (2014-2020)</h1>
   <div id="map-container"></div>
 
   <script type="text/javascript">
     const spec = {
       "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
-      "width": 880,
-      "height": 550,
+      "width": 1100,
+      "height": 700,
       "title": {
-        "text": "Average Annual Rainfall Density in Malaysia (2014-2020)",
-        "subtitle": [
-          "Rainfall measured in mm per square kilometre (mm/km²), averaged 2014–2020.",
-          "Data: Malaysian climate records; map projection adapted via Projection Wizard."
-        ],
-        "subtitleFont": "Arial",
-        "subtitleFontSize": 11,
-        "anchor": "start"
+        "text": ["Rainfall measured in millimeters per square kilometer (mm/km²), averaged across 2014–2020 period.",
+          "Data normalized by state area using logarithmic scaling. Source: Public Sector Open Data Portal (DTSA)."],
+        "titleFont": "Arial",
+        "FontSize": 12,
+        "fontWeight": "normal",
+        "anchor": "start",
       },
-      "projection": {"type": "conicConformal", "center": [109, 4], "parallels": [1, 7],
-        "fit": {"url": "malaysia_state.json", "format": {"type": "topojson", "feature": "malaysia_state"}}
+      "projection": {
+        "type": "conicConformal",
+        "center": [109.5, 4],
+        "parallels": [1, 7],
+        "scale": 2800,
+        "translate": [550, 350]
       },
       "layer": [
         {
-          // Ocean background
-          "data": {
-            "url": "https://cdn.jsdelivr.net/npm/vega-datasets@v1.29.0/data/world-110m.json",
-            "format": {"type": "topojson", "feature": "countries"}
-          },
-          "data": {"graticule": true},
-          "mark": {"type": "geoshape", "fill": "#cfe8ff", "stroke": "white", "strokeWidth": 0.2}
+          // Ocean/water background - darker grey for better contrast
+          "data": {"graticule": {"step": [10, 10]}},
+          "mark": {
+            "type": "geoshape", 
+            "fill": "#e0e0e0", 
+            "stroke": "#d0d0d0", 
+            "strokeWidth": 0.5
+          }
         },
         {
-          // Base Malaysia states (fallback gray)
+          // Graticule lines (longitude/latitude grid)
+          "data": {"graticule": true},
+          "mark": {
+            "type": "geoshape", 
+            "fill": null, 
+            "stroke": "#c0c0c0", 
+            "strokeWidth": 0.8,
+            "strokeDash": [2, 2]
+          }
+        },
+        {
+          // Base Malaysia states (for states without data)
           "data": {
             "url": "malaysia_state.json",
             "format": {"type": "topojson", "feature": "malaysia_state"}
           },
-          "mark": {"type": "geoshape", "fill": "lightgray", "stroke": "white"},
+          "mark": {
+            "type": "geoshape", 
+            "fill": "#d8d8d8", 
+            "stroke": "white",
+            "strokeWidth": 1.5
+          },
           "encoding": {
             "tooltip": [
-              {"field": "properties.NAME_1", "type": "nominal", "title": "State"}
+              {"field": "properties.NAME_1", "type": "nominal", "title": "State/Territory"},
+              {"value": "No data available", "title": "Rainfall Data"}
             ]
           }
         },
         {
-          // Choropleth rainfall density
+          // Choropleth rainfall density with LOG SCALE and SEQUENTIAL COLORS
           "data": {
             "url": "malaysia_state.json",
             "format": {"type": "topojson", "feature": "malaysia_state"}
@@ -67,21 +88,37 @@
               }
             }
           ],
-          "mark": {"type": "geoshape", "stroke": "white"},
+          "mark": {
+            "type": "geoshape", 
+            "stroke": "white",
+            "strokeWidth": 1.0
+          },
           "encoding": {
             "color": {
               "field": "Average_Annual_Rainfall_per_sqkm",
               "type": "quantitative",
-              "title": "Average Rainfall (mm/km²)",
-              "scale": {"type": "log", "scheme": "blues"},
-              "legend": {"titleLimit": 150, "format": ".0f"}
+              "title": ["Average Annual Rainfall", "Density (mm/km²)"],
+              "scale": {
+                "type": "log",
+                "scheme": "blues",
+                "range": ["#f7fbff", "#08306b"]
+              },
+              "legend": {
+                "titleLimit": 200,
+                "format": ".2f",
+                "gradientLength": 200,
+                "gradientThickness": 16,
+                "titleFontSize": 12,
+                "labelFontSize": 11,
+                "orient": "bottom-right"
+              }
             },
             "tooltip": [
-              {"field": "properties.NAME_1", "type": "nominal", "title": "State"},
+              {"field": "properties.NAME_1", "type": "nominal", "title": "State/Territory"},
               {
                 "field": "Average_Annual_Rainfall_per_sqkm",
                 "type": "quantitative",
-                "title": "Average Rainfall (mm/km²)",
+                "title": "Rainfall Density (mm/km²)",
                 "format": ".2f"
               }
             ]
@@ -90,11 +127,19 @@
       ],
       "config": {
         "axis": {"grid": false, "domain": false},
-        "view": {"stroke": null}
+        "view": {"stroke": null},
+        "legend": {
+          "titleColor": "#333",
+          "labelColor": "#555"
+        }
       }
     };
 
-    vegaEmbed("#map-container", spec, {"actions": false}).catch(console.error);
+    // Render map with log scale
+    vegaEmbed("#map-container", spec, {
+      "actions": false,
+      "renderer": "svg"
+    }).catch(console.error);
   </script>
 </body>
 </html>

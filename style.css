@@ -1,7 +1,7 @@
 body {
-    font-family: Arial, sans-serif;
+    /* font-family: Arial, sans-serif; */
     margin: 20px;
-    background-color: #f8f8f8;
+    /* background-color: #f8f8f8; */
     display: flex;
     flex-direction: column;
     align-items: center; /* Center content horizontally */
@@ -9,25 +9,15 @@ body {
     min-height: calc(100vh - 40px); /* Ensure body takes full viewport height minus margin */
 }
 
-#map-container {
-    width: 900px; /* Adjust width as needed for a good aspect ratio */
-    height: 600px; /* Adjust height as needed */
-    margin: 20px 0; /* Add some vertical margin */
-    border: 1px solid #ccc;
-    box-shadow: 3px 3px 10px rgba(0,0,0,0.15); /* Slightly stronger shadow */
-    background-color: white; /* Ensure container has a background */
-}
-
 h1 {
     text-align: center;
-    color: #333;
     margin-bottom: 10px;
     font-size: 1.8em; /* Make title slightly larger */
 }
 
 .map-description {
     text-align: center;
-    color: #666;
+    color: #7d7f7c;
     font-size: 0.9em;
     margin-top: -10px; /* Pull description slightly closer to title */
     margin-bottom: 20px;
