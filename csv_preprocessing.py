@@ -201,8 +201,8 @@ import numpy as np
 # --- Configuration ---
 OBSERVED_CSV_FILE = 'malaysia_rainfall_2000_2021.csv'
 PROJECTED_CSV_FILE = 'malaysia_daily_rainfall_2014_2020.csv'
-AREA_CSV_FILE = 'malaysia_state_area.csv' # NEW: Area data file
-FINAL_OUTPUT_CSV_FILE = 'malaysia_avg_annual_rainfall_final_normalized.csv' # NEW output file name
+AREA_CSV_FILE = 'malaysia_state_area.csv'
+FINAL_OUTPUT_CSV_FILE = 'malaysia_avg_annual_rainfall_final_normalized.csv'
 
 # Target time period for all averages
 TARGET_START_YEAR = 2014
@@ -256,7 +256,6 @@ def process_rainfall_data(df, rainfall_col, state_col, year_col, renames=None):
         df_processed[state_col] = df_processed[state_col].replace(renames)
 
     # Aggregate to annual sum per administrative unit
-    # Sum daily/monthly rainfall for the year
     annual_sums_by_unit_year = df_processed.groupby([state_col, year_col])[rainfall_col].sum().reset_index()
 
     # Calculate overall average annual rainfall per administrative unit for the target period
@@ -295,7 +294,7 @@ print(f"Ignored 'Selangor-Wilayah' from projected dataset. {initial_projected_ro
 
 projected_renames = {
     'NSembilan': 'Negeri Sembilan',
-    'Penang': 'Pulau Pinang', # Rename 'Penang' to 'Pulau Pinang' for consistency
+    'Penang': 'Pulau Pinang',
     'W.P. Kuala Lumpur': 'Kuala Lumpur',
     'W.P. Putrajaya': 'Putrajaya',
     'W.P. Labuan': 'Labuan',
@@ -307,35 +306,11 @@ print(f"Processed projected data shape: {df_projected_processed.shape}")
 print("Projected data head:\n", df_projected_processed.head())
 
 
-# --- Step 3: Combine Data, Prioritizing Observed, then adding proxies for KL/Putrajaya ---
-print("\n--- Combining Processed Datasets (Observed prioritized, then Projected, then Proxies) ---")
+# --- Step 3: Combine Data, Prioritizing Observed ---
+print("\n--- Combining Processed Datasets (Observed prioritized, then Projected) ---")
 
-# Start with observed data
 df_final_combined = df_observed_processed.set_index('State')
-
-# Update from projected data for any administrative units missing in observed.
 df_final_combined = df_final_combined.combine_first(df_projected_processed.set_index('State'))
-
-# Extract Selangor's average for proxying
-if 'Selangor' in df_final_combined.index:
-    selangor_avg_rainfall = df_final_combined.loc['Selangor', 'Average_Annual_Rainfall_mm']
-    print(f"Extracted Selangor's average rainfall ({TARGET_START_YEAR}-{TARGET_END_YEAR}) for proxying: {selangor_avg_rainfall:.2f} mm")
-else:
-    print("WARNING: 'Selangor' data not found after initial combination. Setting proxy rainfall to 0 for missing FTs.")
-    selangor_avg_rainfall = 0 # Fallback if Selangor itself somehow disappears
-
-# Add Kuala Lumpur proxy if still missing
-if 'Kuala Lumpur' not in df_final_combined.index:
-    kuala_lumpur_row = pd.DataFrame([{'State': 'Kuala Lumpur', 'Average_Annual_Rainfall_mm': selangor_avg_rainfall}])
-    df_final_combined = pd.concat([df_final_combined.reset_index(), kuala_lumpur_row], ignore_index=True).set_index('State')
-    print(f"Added Kuala Lumpur proxy data using Selangor's average: {selangor_avg_rainfall:.2f} mm")
-
-# Add Putrajaya proxy if still missing
-if 'Putrajaya' not in df_final_combined.index:
-    putrajaya_row = pd.DataFrame([{'State': 'Putrajaya', 'Average_Annual_Rainfall_mm': selangor_avg_rainfall}])
-    df_final_combined = pd.concat([df_final_combined.reset_index(), putrajaya_row], ignore_index=True).set_index('State')
-    print(f"Added Putrajaya proxy data using Selangor's average: {selangor_avg_rainfall:.2f} mm")
-
 df_final_combined = df_final_combined.reset_index()
 
 
@@ -348,15 +323,14 @@ except FileNotFoundError:
     print(f"Error: '{AREA_CSV_FILE}' not found. Please create this file with 'State' and 'Area_sqkm' columns.")
     exit()
 
-# Ensure consistent state names in area data before merging (if necessary, assuming your GeoJSON_ADMIN_UNITS are final)
+# Ensure consistent state names in area data before merging
 df_area['State'] = df_area['State'].replace({
-    'Penang': 'Pulau Pinang', # If your area CSV uses 'Penang'
-    'W.P. Kuala Lumpur': 'Kuala Lumpur', # If your area CSV uses 'W.P. Kuala Lumpur'
+    'Penang': 'Pulau Pinang',
+    'W.P. Kuala Lumpur': 'Kuala Lumpur',
     'W.P. Putrajaya': 'Putrajaya',
     'W.P. Labuan': 'Labuan',
     'NSembilan': 'Negeri Sembilan'
 })
-
 
 # Merge rainfall data with area data
 df_final_normalized = pd.merge(df_final_combined, df_area, on='State', how='left')
@@ -364,17 +338,54 @@ df_final_normalized = pd.merge(df_final_combined, df_area, on='State', how='left
 # Handle cases where area data might be missing (shouldn't happen if AREA_CSV_FILE is complete)
 if df_final_normalized['Area_sqkm'].isnull().any():
     print("WARNING: Some administrative units are missing area data. They will not be normalized.")
-    # You might want to drop these rows or assign a default area if applicable.
-    df_final_normalized.dropna(subset=['Area_sqkm'], inplace=True) # Dropping for simplicity
+    # For a clean output, we'll drop rows where area is missing for normalization purposes
+    df_final_normalized.dropna(subset=['Area_sqkm'], inplace=True)
 
-# Calculate normalized rainfall
+
+# --- Extract Selangor's Normalized Rainfall for Proxying KL/Putrajaya ---
+# Calculate normalized rainfall for all regions first
 df_final_normalized['Average_Annual_Rainfall_per_sqkm'] = df_final_normalized['Average_Annual_Rainfall_mm'] / df_final_normalized['Area_sqkm']
 
+# Get Selangor's normalized rainfall
+if 'Selangor' in df_final_normalized['State'].values:
+    selangor_avg_rainfall_per_sqkm = df_final_normalized[
+        df_final_normalized['State'] == 'Selangor'
+    ]['Average_Annual_Rainfall_per_sqkm'].iloc[0]
+    print(f"Extracted Selangor's average rainfall per sqkm ({TARGET_START_YEAR}-{TARGET_END_YEAR}) for proxying: {selangor_avg_rainfall_per_sqkm:.4f} mm/km²")
+else:
+    print("WARNING: 'Selangor' data not found after normalization. Setting proxy rainfall per sqkm to 0 for missing FTs.")
+    selangor_avg_rainfall_per_sqkm = 0 # Fallback if Selangor itself somehow disappears
+
+
+# --- Step 5: Add/Update Proxy Data for Kuala Lumpur and Putrajaya (using normalized proxy) ---
+print("\n--- Adding/Updating Proxy Data for Federal Territories (using normalized proxy) ---")
+
+# Function to safely update or add row
+def update_or_add_proxy(df, state_name, proxy_value):
+    if state_name in df['State'].values:
+        # Update existing row
+        df.loc[df['State'] == state_name, 'Average_Annual_Rainfall_per_sqkm'] = proxy_value
+        print(f"Updated {state_name} with Selangor's normalized proxy: {proxy_value:.4f} mm/km²")
+    else:
+        # Add new row
+        new_row = pd.DataFrame([{'State': state_name, 'Average_Annual_Rainfall_per_sqkm': proxy_value}])
+        df = pd.concat([df, new_row], ignore_index=True)
+        print(f"Added {state_name} with Selangor's normalized proxy: {proxy_value:.4f} mm/km²")
+    return df
+
+# Apply proxy for Kuala Lumpur
+df_final_normalized = update_or_add_proxy(df_final_normalized, 'Kuala Lumpur', selangor_avg_rainfall_per_sqkm)
+
+# Apply proxy for Putrajaya
+df_final_normalized = update_or_add_proxy(df_final_normalized, 'Putrajaya', selangor_avg_rainfall_per_sqkm)
+
+
 # Drop the original non-normalized rainfall and area columns if you only want the normalized data
-df_final_normalized.drop(columns=['Average_Annual_Rainfall_mm', 'Area_sqkm'], inplace=True)
+# This has to be done after normalization and proxy assignment
+df_final_normalized.drop(columns=['Average_Annual_Rainfall_mm', 'Area_sqkm'], inplace=True, errors='ignore')
 
 
-# --- Step 5: Final Cross-check with GeoJSON Administrative Units ---
+# --- Step 6: Final Cross-check with GeoJSON Administrative Units ---
 print("\n--- Final Cross-checking with GeoJSON Administrative Units ---")
 csv_admin_units = set(df_final_normalized['State'].unique())
 
@@ -411,3 +422,4 @@ print("\nFinal normalized data head:")
 print(df_final_normalized.head())
 print("\nFinal normalized data tail:")
 print(df_final_normalized.tail())
+print(df_final_normalized)

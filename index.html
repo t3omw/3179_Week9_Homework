@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Average Annual Rainfall in Malaysia by Administrative Unit (2014-2020)</title>
+  <title>Average Annual Rainfall Density (mm/km²) in Malaysia (2014-2020)</title>
   <script src="https://cdn.jsdelivr.net/npm/vega@5.22.1"></script>
   <script src="https://cdn.jsdelivr.net/npm/vega-lite@5.2.0"></script>
   <script src="https://cdn.jsdelivr.net/npm/vega-embed@6.20.8"></script>
 </head>
 <body>
-  <h1>Average Annual Rainfall in Malaysia by Administrative Unit</h1>
+  <h1>Average Annual Rainfall Density (mm/km²) in Malaysia (2014-2020)</h1>
   <div id="map-container"></div>
 
   <script type="text/javascript">
@@ -15,11 +15,31 @@
       "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
       "width": 880,
       "height": 550,
-      "title": "Average Annual Rainfall in Malaysia (2014-2020)",
-      "projection": {"type": "mercator"},
+      "title": {
+        "text": "Average Annual Rainfall Density in Malaysia (2014-2020)",
+        "subtitle": [
+          "Rainfall measured in mm per square kilometre (mm/km²), averaged 2014–2020.",
+          "Data: Malaysian climate records; map projection adapted via Projection Wizard."
+        ],
+        "subtitleFont": "Arial",
+        "subtitleFontSize": 11,
+        "anchor": "start"
+      },
+      "projection": {"type": "conicConformal", "center": [109, 4], "parallels": [1, 7],
+        "fit": {"url": "malaysia_state.json", "format": {"type": "topojson", "feature": "malaysia_state"}}
+      },
       "layer": [
         {
-          // Lightgray fallback (draw all states even if no data)
+          // Ocean background
+          "data": {
+            "url": "https://cdn.jsdelivr.net/npm/vega-datasets@v1.29.0/data/world-110m.json",
+            "format": {"type": "topojson", "feature": "countries"}
+          },
+          "data": {"graticule": true},
+          "mark": {"type": "geoshape", "fill": "#cfe8ff", "stroke": "white", "strokeWidth": 0.2}
+        },
+        {
+          // Base Malaysia states (fallback gray)
           "data": {
             "url": "malaysia_state.json",
             "format": {"type": "topojson", "feature": "malaysia_state"}
@@ -32,7 +52,7 @@
           }
         },
         {
-          // Rainfall choropleth
+          // Choropleth rainfall density
           "data": {
             "url": "malaysia_state.json",
             "format": {"type": "topojson", "feature": "malaysia_state"}
@@ -41,34 +61,37 @@
             {
               "lookup": "properties.NAME_1",
               "from": {
-                "data": {"url": "malaysia_avg_annual_rainfall_final.csv"},
+                "data": {"url": "malaysia_avg_annual_rainfall_final_normalized.csv"},
                 "key": "State",
-                "fields": ["Average_Annual_Rainfall_mm"]
+                "fields": ["Average_Annual_Rainfall_per_sqkm"]
               }
             }
           ],
           "mark": {"type": "geoshape", "stroke": "white"},
           "encoding": {
             "color": {
-              "field": "Average_Annual_Rainfall_mm",
+              "field": "Average_Annual_Rainfall_per_sqkm",
               "type": "quantitative",
-              "title": "Avg. Annual Rainfall (mm)",
-              // "scale": {"scheme": "blues", "domainMin": 1000, "domainMax": 5000},
-              "scale": {"scheme": "blues"},
-              "legend": {"titleLimit": 120, "format": ".0f"}
+              "title": "Average Rainfall (mm/km²)",
+              "scale": {"type": "log", "scheme": "blues"},
+              "legend": {"titleLimit": 150, "format": ".0f"}
             },
             "tooltip": [
               {"field": "properties.NAME_1", "type": "nominal", "title": "State"},
               {
-                "field": "Average_Annual_Rainfall_mm",
+                "field": "Average_Annual_Rainfall_per_sqkm",
                 "type": "quantitative",
-                "title": "Avg. Rainfall (mm)",
-                "format": ".1f"
+                "title": "Average Rainfall (mm/km²)",
+                "format": ".2f"
               }
             ]
           }
         }
-      ]
+      ],
+      "config": {
+        "axis": {"grid": false, "domain": false},
+        "view": {"stroke": null}
+      }
     };
 
     vegaEmbed("#map-container", spec, {"actions": false}).catch(console.error);
