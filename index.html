@@ -20,9 +20,9 @@
         "text": ["Rainfall measured in millimeters per square kilometer (mm/km²), averaged across 2014–2020 period.",
           "Data normalized by state area using logarithmic scaling. Source: Public Sector Open Data Portal (DTSA)."],
         "titleFont": "Arial",
-        "FontSize": 12,
+        "fontSize": 12,
         "fontWeight": "normal",
-        "anchor": "start",
+        "anchor": "start"
       },
       "projection": {
         "type": "conicConformal",
@@ -33,12 +33,12 @@
       },
       "layer": [
         {
-          // Ocean/water background - darker grey for better contrast
+          // Ocean/water background
           "data": {"graticule": {"step": [10, 10]}},
           "mark": {
             "type": "geoshape", 
-            "fill": "#e0e0e0", 
-            "stroke": "#d0d0d0", 
+            "fill": "#f0f0f0",  
+            "stroke": "#e0e0e0",
             "strokeWidth": 0.5
           }
         },
@@ -48,7 +48,8 @@
           "mark": {
             "type": "geoshape", 
             "fill": null, 
-            "stroke": "#c0c0c0", 
+            // "stroke": "#b3d9ff", 
+            "stroke": "#d4ccc0",
             "strokeWidth": 0.8,
             "strokeDash": [2, 2]
           }
@@ -61,7 +62,7 @@
           },
           "mark": {
             "type": "geoshape", 
-            "fill": "#d8d8d8", 
+            "fill": "#e8e0f0",
             "stroke": "white",
             "strokeWidth": 1.5
           },
@@ -73,7 +74,7 @@
           }
         },
         {
-          // Choropleth rainfall density with LOG SCALE and SEQUENTIAL COLORS
+          // Choropleth rainfall density 
           "data": {
             "url": "malaysia_state.json",
             "format": {"type": "topojson", "feature": "malaysia_state"}
@@ -100,8 +101,8 @@
               "title": ["Average Annual Rainfall", "Density (mm/km²)"],
               "scale": {
                 "type": "log",
-                "scheme": "blues",
-                "range": ["#f7fbff", "#08306b"]
+                "scheme": "teals",
+                "range": ["#f0f9ff", "#006d77"]
               },
               "legend": {
                 "titleLimit": 200,
